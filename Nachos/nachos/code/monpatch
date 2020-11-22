@@ -1,0 +1,187 @@
+Index: userprog/consoledriver.cc
+===================================================================
+--- userprog/consoledriver.cc	(révision 5)
++++ userprog/consoledriver.cc	(copie de travail)
+@@ -17,8 +17,19 @@
+     writeDone = new Semaphore("write done", 0);
+     //console = ...
+ 
+-    ReadAvailHandler = in;
+-    WriteDoneHandler = out;
++    console = new Console (in, out, ReadAvailHandler, WriteDoneHandler, NULL);
++
++    char ch;
++
++    // console->PutChar(ch);
++
++    // console->GetChar();
++
++
++
++    // delete console;
++    // delete readAvail;
++    // delete writeDone;
+ }
+ 
+ ConsoleDriver::~ConsoleDriver()
+@@ -30,15 +41,18 @@
+ 
+ void ConsoleDriver::PutChar(int ch)
+ {
+-    putchar(ch);
++    console->TX (ch);
++    writeDone->P ();
+ }
+ 
+ int ConsoleDriver::GetChar()
+ {
+-    char c;
+-    c = getchar();
++    char ch;
+ 
+-    return c;
++    readAvail->P ();	// wait for character to arrive
++	ch = console->RX ();
++
++    return ch;
+ }
+ 
+ void ConsoleDriver::PutString(const char s[])
+Index: userprog/nachos
+===================================================================
+Impossible d'afficher : fichier considéré comme binaire.
+svn:mime-type = application/octet-stream
+Index: userprog/progtest.cc
+===================================================================
+--- userprog/progtest.cc	(révision 5)
++++ userprog/progtest.cc	(copie de travail)
+@@ -13,6 +13,8 @@
+ #include "console.h"
+ #include "addrspace.h"
+ #include "synch.h"
++#include "consoledriver.h"
++#include "machine.h"
+ 
+ //----------------------------------------------------------------------
+ // StartProcess
+@@ -72,7 +74,7 @@
+ {
+     (void) arg;
+     writeDone->V ();
+-}
++} 
+ 
+ //----------------------------------------------------------------------
+ // ConsoleTest
+@@ -106,6 +108,7 @@
+           
+           console->TX('>');
+           writeDone->P ();
++          printf("\n");
+       }
+ 
+ 	  if (ch == 'q' || ch == EOF) {
+Index: userprog/progtest.o
+===================================================================
+Impossible d'afficher : fichier considéré comme binaire.
+svn:mime-type = application/octet-stream
+Index: userprog/main.o
+===================================================================
+Impossible d'afficher : fichier considéré comme binaire.
+svn:mime-type = application/octet-stream
+Index: userprog/sysdep.o
+===================================================================
+Impossible d'afficher : fichier considéré comme binaire.
+svn:mime-type = application/octet-stream
+Index: machine/sysdep.cc
+===================================================================
+--- machine/sysdep.cc	(révision 5)
++++ machine/sysdep.cc	(copie de travail)
+@@ -95,9 +95,7 @@
+ #include "system.h"
+ 
+ //----------------------------------------------------------------------
+-// PollFile
+-// 	Check open file or open socket to see if there are any 
+-//	characters that can be read immediately.  If so, read them
++// PollFileconsoledriver immediately.  If so, read them
+ //	in, and return TRUE.
+ //
+ //	In the network case, if there are no threads for us to run,
+@@ -464,10 +462,7 @@
+ // Exit
+ // 	Quit without dropping core.
+ //----------------------------------------------------------------------
+-
+-void 
+-Exit(int exitCode)
+-{
++ 
+     exit(exitCode);
+ }
+ 
+Index: threads/main.cc
+===================================================================
+--- threads/main.cc	(révision 5)
++++ threads/main.cc	(copie de travail)
+@@ -25,7 +25,16 @@
+ 
+ #include <malloc.h>
+ 
++#ifdef USER_PROGRAM
++#include "consoledriver.h"
++#endif
+ 
++#ifdef CHANGED
++#include "progtest.h"
++#endif //CHANGED
++
++
++
+ // External functions used by this file
+ 
+ extern void ThreadTest (void), Copy (char *unixFile, char *nachosFile);
+@@ -60,7 +69,7 @@
+ 	printf (
+ "Usage: nachos -d <debugflags> -rs <random seed #> -z -h\n"
+ #ifdef USER_PROGRAM
+-"       -s -x <nachos file> -c <consoleIn> <consoleOut>\n"
++"       -s -x -sc <nachos file> -c <consoleIn> <consoleOut>\n"
+ #endif
+ #ifdef FILESYS
+ "       -f -cp <unix file> <nachos file>\n"
+@@ -81,6 +90,7 @@
+ "-s causes user programs to be executed in single-step mode\n"
+ "-x runs a user program\n"
+ "-c tests the console\n"
++//"-sc tests \n"
+ #endif
+ #ifdef FILESYS
+ "FILESYS\n"
+@@ -131,7 +141,25 @@
+ 		      ConsoleTest (*(argv + 1), *(argv + 2));
+ 		      argCount = 3;
+ 		  }
+-	    }
++	    } 
++
++		#ifdef CHANGED
++		
++		//test consoledriver
++		else if (!strcmp (*argv, "-sc"))
++		{
++			printf("\t ********** un test ********** \n \n");
++			if (argc == 1)
++		    ConsoleDriver (NULL, NULL);
++		else
++		  {
++		      ASSERT (argc > 2);
++		      ConsoleDriver (*(argv + 1), *(argv + 2));
++		      argCount = 3;
++		  }
++
++		}
++		#endif //CHANGED
+ #endif // USER_PROGRAM
+ #ifdef FILESYS
+ 	  if (!strcmp (*argv, "-cp"))
