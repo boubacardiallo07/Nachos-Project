@@ -66,6 +66,37 @@ List AddrSpaceList;
 //      "executable" is the file containing the object code to load into memory
 //----------------------------------------------------------------------
 
+#ifdef CHANGED
+
+static void ReadAtVirtual(OpenFile *executable, int virtualaddr, int numBytes, int position, TranslationEntry *pageTable, unsigned numPages){
+    
+    char *tmp= new char[numBytes];
+    TranslationEntry *old_pageTable;
+    unsigned old_numPages;
+
+    executable->ReadAt (tmp, numBytes, position);
+
+    old_pageTable = machine->currentPageTable;
+    old_numPages = machine->currentPageTableSize;
+
+    machine->currentPageTable = pageTable;
+    machine->currentPageTableSize = numPages;
+
+    for (int i = 0; i < numBytes; i++)
+    {
+        machine->WriteMem (virtualaddr +i, 1, tmp[i]);
+    }
+    machine->currentPageTableSize = old_numPages;
+    machine->currentPageTable = old_pageTable;
+
+    delete []tmp;
+    
+}
+
+
+#endif //CHANGED
+
+
 AddrSpace::AddrSpace (OpenFile * executable)
 {
     unsigned int i, size;
