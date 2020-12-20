@@ -51,24 +51,19 @@ SwapHeader (NoffHeader * noffH)
 //----------------------------------------------------------------------
 List AddrSpaceList;
 
-//----------------------------------------------------------------------
-// AddrSpace::AddrSpace
-//      Create an address space to run a user program.
-//      Load the program from a file "executable", and set everything
-//      up so that we can start executing user instructions.
-//
-//      Assumes that the object code file is in NOFF format.
-//
-//      First, set up the translation from program memory to physical 
-//      memory.  For now, this is really simple (1:1), since we are
-//      only uniprogramming, and we have a single unsegmented page table
-//
-//      "executable" is the file containing the object code to load into memory
-//----------------------------------------------------------------------
-
 #ifdef CHANGED
 
-static void ReadAtVirtual(OpenFile *executable, int virtualaddr, int numBytes, int position, TranslationEntry *pageTable, unsigned numPages){
+
+//---------------------------------------------------------------
+//ReadAtVirtual
+//      Lit numBytes octetc depuis la position position dans le fichier
+//      executable, en l'ecrivant dans l'espace d'addressage virtuel
+//      defini par pageTable de taille numPages.
+//---------------------------------------------------------------
+
+static void ReadAtVirtual(OpenFile *executable, int virtualaddr,
+ int numBytes,
+ int position, TranslationEntry *pageTable, unsigned numPages){
     
     char *tmp= new char[numBytes];
     TranslationEntry *old_pageTable;
@@ -95,6 +90,21 @@ static void ReadAtVirtual(OpenFile *executable, int virtualaddr, int numBytes, i
 
 
 #endif //CHANGED
+
+//----------------------------------------------------------------------
+// AddrSpace::AddrSpace
+//      Create an address space to run a user program.
+//      Load the program from a file "executable", and set everything
+//      up so that we can start executing user instructions.
+//
+//      Assumes that the object code file is in NOFF format.
+//
+//      First, set up the translation from program memory to physical 
+//      memory.  For now, this is really simple (1:1), since we are
+//      only uniprogramming, and we have a single unsegmented page table
+//
+//      "executable" is the file containing the object code to load into memory
+//----------------------------------------------------------------------
 
 
 AddrSpace::AddrSpace (OpenFile * executable)
@@ -141,17 +151,22 @@ AddrSpace::AddrSpace (OpenFile * executable)
       {
 	  DEBUG ('a', "Initializing code segment, at 0x%x, size 0x%x\n",
 		 noffH.code.virtualAddr, noffH.code.size);
-	  executable->ReadAt (&(machine->mainMemory[noffH.code.virtualAddr]),
-			      noffH.code.size, noffH.code.inFileAddr);
+//	  executable->ReadAt (&(machine->mainMemory[noffH.code.virtualAddr]),
+//			      noffH.code.size, noffH.code.inFileAddr);
+
+    ReadAtVirtual(execuatable,noffH.code.virtualAddr, noffH.code.size, noffH.code.inFileAddr, pageTable, numPages);
       }
     if (noffH.initData.size > 0)
       {
 	  DEBUG ('a', "Initializing data segment, at 0x%x, size 0x%x\n",
 		 noffH.initData.virtualAddr, noffH.initData.size);
-	  executable->ReadAt (&
-			      (machine->mainMemory
-			       [noffH.initData.virtualAddr]),
-			      noffH.initData.size, noffH.initData.inFileAddr);
+	//  executable->ReadAt (&
+	//		      (machine->mainMemory
+	//		       [noffH.initData.virtualAddr]),
+	//		      noffH.initData.size, noffH.initData.inFileAddr);
+      
+     ReadAtVirtual(execuatable,noffH.code.virtualAddr, noffH.code.size, noffH.code.inFileAddr, pageTable, numPages);
+      
       }
 
     DEBUG ('a', "Area for stacks at 0x%x, size 0x%x\n",
